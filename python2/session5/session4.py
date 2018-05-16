@@ -90,3 +90,11 @@ arr_ele_slop = ma.dstack((comp_dem_copy, comp_slope_copy))
 print(arr_ele_slop)
 
 test = ma.masked_where((arr_ele_slop < 1000 & arr_ele_slop < 30), )
+
+#https://snakify.org/lessons/two_dimensional_lists_arrays/
+
+###calculate the proportional area (two decimal digits) of raster cells having the value ‘1’ relative to the entire area. Upload this number to moodle.
+#Find the maximum(s) along axis zero with numpy.amax
+#create a boolean array where array == maximum
+#Count all the True values of the boolean array along axis zero with numpy.sum
+#find the proportion by dividing the count(s) by the number of rows in the original array - array.shape[0]
