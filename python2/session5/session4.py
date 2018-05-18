@@ -3,19 +3,22 @@ import glob
 import os
 import numpy as np
 import numpy.ma as ma
-from PIL import Image
+from numpy import *
+#import ArcPy
+#from PIL import Image
+from collections import Counter
 
 
-dem = gdal.Open("O:/Student_Data/DieckmannM/python2/session5/DEM_Humboldt_sub.tif")
-slope = gdal.Open("O:/Student_Data/DieckmannM/python2/session5/SLOPE_Humboldt_sub.tif")
-thp = gdal.Open("O:/Student_Data/DieckmannM/python2/session5/THP_Humboldt_sub.tif")
+dem = gdal.Open("/Users/Maria/python/THP_Humboldt_sub.tif")
+slope = gdal.Open("/Users/Maria/python/SLOPE_Humboldt_sub.tif")
+thp = gdal.Open("/Users/Maria/python/THP_Humboldt_sub.tif")
 
 gt_dem = dem.GetGeoTransform()
 gt_slope = slope.GetGeoTransform()
 gt_thp = thp.GetGeoTransform()
 
 
-root_folder = "O:/Student_Data/DieckmannM/python2/session5/"
+root_folder = "/Users/Maria/python/"
 
 file_list = glob.glob(os.path.join(root_folder + "*.tif"))
 print(file_list)
@@ -71,11 +74,12 @@ print("Array THP ", array_thp)
 
 comp_dem = ma.masked_where(array_dem >= 2000, array_dem)
 comp_dem_copy = ma.masked_where(array_dem >= 2000, array_dem).copy()
-print(comp_dem)
+print("DEM", comp_dem)
 comp_slope = ma.masked_where(array_slope < 0, array_slope)
 comp_slope_copy = ma.masked_where(array_slope < 0, array_slope).copy()
-print(comp_slope)
+print("SLOPE", comp_slope)
 comp_thp = ma.masked_where(array_thp >= 10000, array_thp)
+comp_thp_copy = ma.masked_where(array_thp >= 10000, array_thp).copy()
 print(comp_thp)
 
 print("Mean of DEM: ", np.mean(comp_dem_copy), "Min of DEM: ", np.min(comp_dem_copy), "Max of DEM: ", np.max(comp_dem_copy))
@@ -86,15 +90,62 @@ print("Mean of slope: ", np.mean(comp_slope_copy), "Min of slope: ", np.min(comp
 #< 1000m and slope <30deg have the value ‘1’, and all other areas the value ‘0’. Write this binary
 #mask into a new raster file and upload it to moodle.
 
-arr_ele_slop = ma.dstack((comp_dem_copy, comp_slope_copy))
-print(arr_ele_slop)
+arr_dem_slope = ma.dstack((comp_dem_copy, comp_slope_copy))
+print("Stack   ",arr_dem_slope)
 
-test = ma.masked_where((arr_ele_slop < 1000 & arr_ele_slop < 30), )
 
-#https://snakify.org/lessons/two_dimensional_lists_arrays/
 
-###calculate the proportional area (two decimal digits) of raster cells having the value ‘1’ relative to the entire area. Upload this number to moodle.
-#Find the maximum(s) along axis zero with numpy.amax
-#create a boolean array where array == maximum
-#Count all the True values of the boolean array along axis zero with numpy.sum
-#find the proportion by dividing the count(s) by the number of rows in the original array - array.shape[0]
+print(arr_dem_slope.shape)
+
+a = arr_dem_slope[:,:,0].copy()
+b = arr_dem_slope[:,:,1].copy()
+print("DEM:", a)
+print("SLOPE:",b)
+#print(ma.array(a, mask=np.isnan(a)))
+#print(ma.array(b, mask=np.isnan(b)))
+where_are_NaNs = isnan(a)
+a[where_are_NaNs] = 9999
+where_are_NaNs = isnan(b)
+b[where_are_NaNs] = 9999
+
+test = (a < 1000) | (b < 30)
+
+print("Test:", test)
+print("Shape of test", test.shape)
+#test.sort()
+#print("SORTED TEST:", test)
+testy = test * 1
+#print("Testy: ",test)
+#testy.sort()
+#print("SORTED:", testy)
+print(ma.min(testy))
+
+
+####write array into raster
+dst_filename = 'xxx.tiff'
+x_pixels = 599  # number of pixels in x
+y_pixels = 1240  # number of pixels in y
+driver = gdal.GetDriverByName('GTiff')
+outds = driver.Create(dst_filename,x_pixels, y_pixels, 1)
+outds.GetRasterBand(1).WriteArray(test)
+
+# follow code is adding GeoTranform and Projection
+geotrans=dem.GetGeoTransform()  #get GeoTranform from existed 'data0'
+proj=dem.GetProjection() #you can get from a exsited tif or import
+outds.SetGeoTransform(geotrans)
+outds.SetProjection(proj)
+outds.FlushCache()
+outds=None
+
+
+
+#binary_ras = gdal.Open(root_folder + "xxx.tiff")
+print((test == 1).sum())
+print((test == 0).sum())
+
+
+
+#task 2
+#array_combined = ma.concatenate([comp_dem_copy, comp_slope_copy, comp_thp_copy], axis = 1)
+#print(array_combined)
+
