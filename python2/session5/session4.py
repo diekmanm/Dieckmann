@@ -9,7 +9,7 @@ from numpy import *
 from collections import Counter
 
 
-dem = gdal.Open("/Users/Maria/python/THP_Humboldt_sub.tif")
+dem = gdal.Open("/Users/Maria/python/DEM_Humboldt_sub.tif")
 slope = gdal.Open("/Users/Maria/python/SLOPE_Humboldt_sub.tif")
 thp = gdal.Open("/Users/Maria/python/THP_Humboldt_sub.tif")
 
@@ -72,7 +72,7 @@ xoff2, yoff2 = map(int, offset_thp)
 array_thp = thp.ReadAsArray(xoff2, yoff2, 599, 1240)
 print("Array THP ", array_thp)
 
-comp_dem = ma.masked_where(array_dem >= 2000, array_dem)
+comp_dem = ma.masked_where(array_dem >= 3000, array_dem)
 comp_dem_copy = ma.masked_where(array_dem >= 2000, array_dem).copy()
 print("DEM", comp_dem)
 comp_slope = ma.masked_where(array_slope < 0, array_slope)
@@ -103,12 +103,9 @@ print("DEM:", a)
 print("SLOPE:",b)
 #print(ma.array(a, mask=np.isnan(a)))
 #print(ma.array(b, mask=np.isnan(b)))
-where_are_NaNs = isnan(a)
-a[where_are_NaNs] = 9999
-where_are_NaNs = isnan(b)
-b[where_are_NaNs] = 9999
 
-test = (a < 1000) | (b < 30)
+
+test = (a < 1000) & (b < 30)
 
 print("Test:", test)
 print("Shape of test", test.shape)
@@ -116,9 +113,9 @@ print("Shape of test", test.shape)
 #print("SORTED TEST:", test)
 testy = test * 1
 #print("Testy: ",test)
-#testy.sort()
-#print("SORTED:", testy)
-print(ma.min(testy))
+testy.sort()
+print("SORTED:", testy)
+print(ma.max(testy))
 
 
 ####write array into raster
@@ -136,12 +133,24 @@ outds.SetGeoTransform(geotrans)
 outds.SetProjection(proj)
 outds.FlushCache()
 outds=None
+value1 = (testy == 1).sum()
+value0 = (testy == 0).sum()
+print(value1, value0)
 
+binary_ras = gdal.Open(root_folder + "xxx.tiff")
+gt_bin_ras = binary_ras.GetGeoTransform()
+pixelSizeX = gt_bin_ras[1]
+pixelSizeY =-gt_bin_ras[5]
+print(pixelSizeX)
+print(pixelSizeY)
+area = (599*1240)
+print("Area ", "%.2f" % area, "Fuß")
 
+print("number of pixels with value 1: " + str(value1))
+print("number of pixels with value 0: " + str(value0))
+percentage = ((value1 / area) * 100.0)
+print("percentage of pixels with value 1:", "%.2f" % percentage, "%")
 
-#binary_ras = gdal.Open(root_folder + "xxx.tiff")
-print((test == 1).sum())
-print((test == 0).sum())
 
 
 
