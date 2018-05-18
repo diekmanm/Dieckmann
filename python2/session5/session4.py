@@ -49,7 +49,6 @@ def readcoordinates(file_list):
 
 readcoordinates(file_list)
 
-
 ###get arrays###
 inv_gt_dem = gdal.InvGeoTransform(gt_dem)
 print(inv_gt_dem)
@@ -72,85 +71,57 @@ xoff2, yoff2 = map(int, offset_thp)
 array_thp = thp.ReadAsArray(xoff2, yoff2, 599, 1240)
 print("Array THP ", array_thp)
 
-comp_dem = ma.masked_where(array_dem >= 3000, array_dem)
-comp_dem_copy = ma.masked_where(array_dem >= 2000, array_dem).copy()
+comp_dem = ma.masked_where(array_dem >= 3000, array_dem).copy()
+comp_slope = ma.masked_where(array_slope < 0, array_slope).copy()
+comp_thp = ma.masked_where(array_thp >= 10000, array_thp).copy()
 print("DEM", comp_dem)
-comp_slope = ma.masked_where(array_slope < 0, array_slope)
-comp_slope_copy = ma.masked_where(array_slope < 0, array_slope).copy()
 print("SLOPE", comp_slope)
-comp_thp = ma.masked_where(array_thp >= 10000, array_thp)
-comp_thp_copy = ma.masked_where(array_thp >= 10000, array_thp).copy()
 print(comp_thp)
-
-print("Mean of DEM: ", np.mean(comp_dem_copy), "Min of DEM: ", np.min(comp_dem_copy), "Max of DEM: ", np.max(comp_dem_copy))
-print("Mean of slope: ", np.mean(comp_slope_copy), "Min of slope: ", np.min(comp_slope_copy), "Max of slope: ", np.max(comp_slope_copy))
-
-
-#Now take the elevation and slope layers only, and build a binary mask in which areas with elevation
-#< 1000m and slope <30deg have the value ‘1’, and all other areas the value ‘0’. Write this binary
-#mask into a new raster file and upload it to moodle.
+print("Mean of DEM: ", np.mean(comp_demy), "Min of DEM: ", np.min(comp_dem), "Max of DEM: ", np.max(comp_dem))
+print("Mean of slope: ", np.mean(comp_slope), "Min of slope: ", np.min(comp_slope), "Max of slope: ", np.max(comp_slope))
 
 arr_dem_slope = ma.dstack((comp_dem_copy, comp_slope_copy))
-print("Stack   ",arr_dem_slope)
-
-
-
+print("STACK:",arr_dem_slope)
 print(arr_dem_slope.shape)
 
 a = arr_dem_slope[:,:,0].copy()
 b = arr_dem_slope[:,:,1].copy()
 print("DEM:", a)
 print("SLOPE:",b)
-#print(ma.array(a, mask=np.isnan(a)))
-#print(ma.array(b, mask=np.isnan(b)))
 
+req_dem_slope = (a < 1000) & (b < 30)
+print("Test:", req_dem_slope)
+print("Shape of test", req_dem_slope.shape)
 
-test = (a < 1000) & (b < 30)
-
-print("Test:", test)
-print("Shape of test", test.shape)
-#test.sort()
-#print("SORTED TEST:", test)
-testy = test * 1
-#print("Testy: ",test)
-testy.sort()
-print("SORTED:", testy)
-print(ma.max(testy))
+req_dem_slope = req_dem_slope * 1
+#print(ma.max(req_dem_slope))
 
 
 ####write array into raster
-dst_filename = 'xxx.tiff'
-x_pixels = 599  # number of pixels in x
-y_pixels = 1240  # number of pixels in y
+dst_filename = 'Final.tiff'
+x_pixels = 599  
+y_pixels = 1240  
 driver = gdal.GetDriverByName('GTiff')
 outds = driver.Create(dst_filename,x_pixels, y_pixels, 1)
-outds.GetRasterBand(1).WriteArray(test)
-
-# follow code is adding GeoTranform and Projection
-geotrans=dem.GetGeoTransform()  #get GeoTranform from existed 'data0'
-proj=dem.GetProjection() #you can get from a exsited tif or import
+outds.GetRasterBand(1).WriteArray(req_dem_slope)
+geotrans=dem.GetGeoTransform()  
+proj=dem.GetProjection() 
 outds.SetGeoTransform(geotrans)
 outds.SetProjection(proj)
 outds.FlushCache()
 outds=None
-value1 = (testy == 1).sum()
-value0 = (testy == 0).sum()
+      
+value1 = (req_dem_slope == 1).sum()
+value0 = (req_dem_slope == 0).sum()
 print(value1, value0)
-
-binary_ras = gdal.Open(root_folder + "xxx.tiff")
-gt_bin_ras = binary_ras.GetGeoTransform()
-pixelSizeX = gt_bin_ras[1]
-pixelSizeY =-gt_bin_ras[5]
-print(pixelSizeX)
-print(pixelSizeY)
+      
 area = (599*1240)
-print("Area ", "%.2f" % area, "Fuß")
-
+print("Area: ", "%.2f" % area, "pixels")
 print("number of pixels with value 1: " + str(value1))
 print("number of pixels with value 0: " + str(value0))
+
 percentage = ((value1 / area) * 100.0)
 print("percentage of pixels with value 1:", "%.2f" % percentage, "%")
-
 
 
 
