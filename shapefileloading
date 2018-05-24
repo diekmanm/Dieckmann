@@ -1,0 +1,64 @@
+import os
+from osgeo import ogr, osr, gdal
+
+
+
+
+CO = r"/Users/Maria/python/session4/gadm36_shp/gadm36.shp"
+
+
+dataSource_CO = ogr.Open(CO)
+lyr_CO = dataSource_CO.GetLayer(0)
+layerDefinition_CO = lyr_CO.GetLayerDefn()
+print(layerDefinition_CO)
+
+print("Name  -  Type  Width  Precision")
+for i in range(layerDefinition_CO.GetFieldCount()):
+    fieldName_CO =  layerDefinition_CO.GetFieldDefn(i).GetName()
+    fieldTypeCode_CO = layerDefinition_CO.GetFieldDefn(i).GetType()
+    fieldType_CO = layerDefinition_CO.GetFieldDefn(i).GetFieldTypeName(fieldTypeCode_CO)
+    fieldWidth_CO = layerDefinition_CO.GetFieldDefn(i).GetWidth()
+    GetPrecision_CO = layerDefinition_CO.GetFieldDefn(i).GetPrecision()
+    print(fieldName_CO + " - " + fieldType_CO + " " + str(fieldWidth_CO) + " " + str(GetPrecision_CO))
+
+
+
+PA = r"/Users/Maria/python/session4/WDPA_May2018-shapefile/WDPA_May2018-shapefile-polygons.shp"
+
+dataSource_PA = ogr.Open(PA)
+lyr_PA = dataSource_PA.GetLayer(0)
+layerDefinition_PA = lyr_PA.GetLayerDefn()
+
+print(""
+      "")
+print("Name  -  Type  Width  Precision")
+for i in range(layerDefinition_PA.GetFieldCount()):
+    fieldName_PA =  layerDefinition_PA.GetFieldDefn(i).GetName()
+    fieldTypeCode_PA = layerDefinition_PA.GetFieldDefn(i).GetType()
+    fieldType_PA = layerDefinition_PA.GetFieldDefn(i).GetFieldTypeName(fieldTypeCode_PA)
+    fieldWidth_PA = layerDefinition_PA.GetFieldDefn(i).GetWidth()
+    GetPrecision_PA = layerDefinition_PA.GetFieldDefn(i).GetPrecision()
+
+    print(fieldName_PA + " - " + fieldType_PA + " " + str(fieldWidth_PA) + " " + str(GetPrecision_PA))
+
+
+featureCount_CO = lyr_CO.GetFeatureCount()
+print("Number of features in %s: %d" % (os.path.basename(CO), featureCount_CO))
+featureCount_PA = lyr_PA.GetFeatureCount()
+print("Number of features in %s: %d" % (os.path.basename(PA), featureCount_PA))
+
+
+
+
+
+# needed variables:
+# country
+# MARINE (string) [0 (terrestrial),1 (coastal),2 (marine)]
+# IUCN_CAT (string) [I-IV, not reported, not applicable]
+# NAME (string)
+# STATUS_YR (string)
+# GIS_AREA (double)
+# STATUS (string) [only designated & established]
+
+# MARINE == 0
+# STATUS == established OR designated
