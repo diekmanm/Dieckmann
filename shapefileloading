@@ -1,64 +1,42 @@
-import os
-from osgeo import ogr, osr, gdal
+import pandas as pd
+import shapefile
 
 
+#shapefile to dataframe countries
+
+shp_path_CO = r"O:\Student_Data\DieckmannM\python2\groupwork\gadm36_dissolve.shp"
+sf_CO = shapefile.Reader(shp_path_CO)
+#print(sf_CO)
+#grab the shapefile's field names (omit the first psuedo field)
+fields_CO = [x[0] for x in sf_CO.fields][1:]
+records_CO = sf_CO.records()
+shps_CO = [s.points for s in sf_CO.shapes()]
+print(shps)
+#write the records into a dataframe
+CO_dataframe = pd.DataFrame(columns=fields_CO, data=records_CO)
+#add the coordinate data to a column called "coords"
+CO_dataframe = CO_dataframe.assign(coords=shps_CO)
+print(CO_dataframe)
+CO_dataframe.to_csv("O:\Student_Data\DieckmannM\python2\groupwork\pandas_CO.csv", sep=' ')
 
 
-CO = r"/Users/Maria/python/session4/gadm36_shp/gadm36.shp"
+#shapefile to dataframe protected areas
 
+shp_path_PA = r"O:\Student_Data\DieckmannM\python2\groupwork\WDPA_May2018-shapefile-polygons.shp"
+sf_PA = shapefile.Reader(shp_path_PA)
+print(sf_PA)
+#grab the shapefile's field names (omit the first psuedo field)
+fields_PA = [x[0] for x in sf_PA.fields][1:]
+records_PA = sf_PA.records()
+shps_PA = [s.points for s in sf_PA.shapes()]
+#print(shps)
+#write the records into a dataframe
+PA_dataframe = pd.DataFrame(columns=fields_PA, data=records_PA)
+#add the coordinate data to a column called "coords"
+PA_dataframe = PA_dataframe.assign(coords=shps_PA)
+print(PA_dataframe)
+PA_dataframe.to_csv("O:\Student_Data\DieckmannM\python2\groupwork\pandas_PA.csv", sep=' ')
 
-dataSource_CO = ogr.Open(CO)
-lyr_CO = dataSource_CO.GetLayer(0)
-layerDefinition_CO = lyr_CO.GetLayerDefn()
-print(layerDefinition_CO)
-
-print("Name  -  Type  Width  Precision")
-for i in range(layerDefinition_CO.GetFieldCount()):
-    fieldName_CO =  layerDefinition_CO.GetFieldDefn(i).GetName()
-    fieldTypeCode_CO = layerDefinition_CO.GetFieldDefn(i).GetType()
-    fieldType_CO = layerDefinition_CO.GetFieldDefn(i).GetFieldTypeName(fieldTypeCode_CO)
-    fieldWidth_CO = layerDefinition_CO.GetFieldDefn(i).GetWidth()
-    GetPrecision_CO = layerDefinition_CO.GetFieldDefn(i).GetPrecision()
-    print(fieldName_CO + " - " + fieldType_CO + " " + str(fieldWidth_CO) + " " + str(GetPrecision_CO))
-
-
-
-PA = r"/Users/Maria/python/session4/WDPA_May2018-shapefile/WDPA_May2018-shapefile-polygons.shp"
-
-dataSource_PA = ogr.Open(PA)
-lyr_PA = dataSource_PA.GetLayer(0)
-layerDefinition_PA = lyr_PA.GetLayerDefn()
-
-print(""
-      "")
-print("Name  -  Type  Width  Precision")
-for i in range(layerDefinition_PA.GetFieldCount()):
-    fieldName_PA =  layerDefinition_PA.GetFieldDefn(i).GetName()
-    fieldTypeCode_PA = layerDefinition_PA.GetFieldDefn(i).GetType()
-    fieldType_PA = layerDefinition_PA.GetFieldDefn(i).GetFieldTypeName(fieldTypeCode_PA)
-    fieldWidth_PA = layerDefinition_PA.GetFieldDefn(i).GetWidth()
-    GetPrecision_PA = layerDefinition_PA.GetFieldDefn(i).GetPrecision()
-
-    print(fieldName_PA + " - " + fieldType_PA + " " + str(fieldWidth_PA) + " " + str(GetPrecision_PA))
-
-
-featureCount_CO = lyr_CO.GetFeatureCount()
-print("Number of features in %s: %d" % (os.path.basename(CO), featureCount_CO))
-featureCount_PA = lyr_PA.GetFeatureCount()
-print("Number of features in %s: %d" % (os.path.basename(PA), featureCount_PA))
-
-
-
-
-
-# needed variables:
-# country
-# MARINE (string) [0 (terrestrial),1 (coastal),2 (marine)]
-# IUCN_CAT (string) [I-IV, not reported, not applicable]
-# NAME (string)
-# STATUS_YR (string)
-# GIS_AREA (double)
-# STATUS (string) [only designated & established]
-
-# MARINE == 0
-# STATUS == established OR designated
+##create empty dataframe
+columns = ["country id", "country name", "pa_category", "# pa ", "pa_area", "largest_pa_area", "largest_pa_name", "largest_pa_year"]
+df_out = pd.DataFrame (columns=columns)
