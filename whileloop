@@ -1,0 +1,24 @@
+from osgeo import gdal, ogr, osr
+
+root_folder = '/Users/Maria/python/session4'
+
+CO = ogr.Open(root_folder + '/gadm36_dissolve.shp')
+PA = ogr.Open(root_folder + '/WDPA_May2018-shapefile-polygons.shp')
+
+CO_lyr = CO.GetLayer()
+PA_lyr = PA.GetLayer()
+
+
+feature_CO = CO_lyr.GetNextFeature()
+while feature_CO:
+    #name = ("NAME_0")
+    #CO_lyr.SetAttributeFilter("NAME_0 = '"+name+"'")
+    #print(CO_lyr.GetFeatureCount())
+    feat = CO_lyr.GetNextFeature() # takes first feature with first looping
+    country = feat.geometry().Clone() # takes geometry of feature and copies it
+    PA_lyr.SetSpatialFilter(country) # filters every feature of PA layer with former geometry
+    print(PA_lyr.GetFeatureCount())
+    PA_lyr.SetSpatialFilter(None) # set spatial filter none to go to next feature in country layer
+    #no name of country is printed
+
+CO_lyr.ResetReading()
