@@ -10,15 +10,14 @@ PA_lyr = PA.GetLayer()
 
 
 feature_CO = CO_lyr.GetNextFeature()
+
+
 while feature_CO:
-    #name = ("NAME_0")
-    #CO_lyr.SetAttributeFilter("NAME_0 = '"+name+"'")
-    #print(CO_lyr.GetFeatureCount())
+    print(feature_CO.GetField("NAME_0"))  # prints name of first layer again and again
     feat = CO_lyr.GetNextFeature() # takes first feature with first looping
     country = feat.geometry().Clone() # takes geometry of feature and copies it
     PA_lyr.SetSpatialFilter(country) # filters every feature of PA layer with former geometry
     print(PA_lyr.GetFeatureCount())
     PA_lyr.SetSpatialFilter(None) # set spatial filter none to go to next feature in country layer
-    #no name of country is printed
 
 CO_lyr.ResetReading()
