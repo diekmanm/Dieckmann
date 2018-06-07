@@ -3,7 +3,7 @@
 import time
 import numpy as np
 import gdal
-
+import ospybook as pb
 
 
 # set starting time ###########################################################
@@ -57,9 +57,8 @@ def make_slices(data, rows, cols):
             #print(slices)
         #return(slices_fin)
     #print("Slices", counter)
-    slice_arr = np.asarray(slices)
-    return slice_arr
-
+    #slice_arr = np.asarray(slices)
+    return slices
 
 
 
@@ -78,32 +77,76 @@ slices_t3_21 = make_slices(array_t3, 21,21)
 slices_t3_31 = make_slices(array_t3, 31,31)
 
 
-#print("Slices for Tile 1 with 150m:", '\n', slices_t1_11)
+print("Slices for Tile 1 with 150m:", '\n', slices_t1_11)
 #print("Slices for Tile 1 with 450m:", '\n', slices_t1_31)
 
 # get a a raster with only -99 for NoData values ###########################
-nodata_ras = np.ones((1000, 1000)) * -99
+#nodata_ras = np.ones((1000, 1000)) * -99
 #print(nodata_ras)
 
 counter = 0
 #def SHDI():
-for slice in slices_t1_11:
+for i in slices_t1_11:
     results = []
     counter += 1
-    cat_list = [1, 2, 3, 5, 11, 13, 17, 18, 19]
-    cat_list2 = [4, 6, 7, 8, 9, 10, 12, 14, 15, 16, 20]
-    for x in cat_list:
-        unique, counts = np.unique(x, return_counts=True)
-    for y in cat_list2:
-        y = -99
-    total = len(slice)
-    #print(total)
-    #prop = cat_count / total
-    #print(prop)
-    #shdi = prop * np.log(prop)
-    #results.append(shdi)
-    #print(results)
+    cat_list = [1,2,3,5,11,13,17,18,19]
+    unique, counts = np.unique(i, return_counts=True)
+    dict1 = dict(zip(unique, counts))
+    #print(dict1)
+    p_dict = {}
+    for cat in cat_list:
+        if cat in dict1:
+            p_dict.update({cat: dict1[cat]})
+            #print(p_dict)
+    cat_sum = sum(p_dict.values())
+    #print(cat_sum)
+    for cat in cat_list:
+        if cat in dict1:
+            prop = p_dict[cat]/cat_sum
+            # print(prop)
+            SHDI = prop*np.log(prop)
+            results.append(SHDI)
+    SHDI_fin = sum(results) * (-1)
+    print(SHDI_fin)
+print(counter)
 
+
+
+# function for raster writing ###################################################
+
+out_fn = "/Users/Maria/PycharmProjects/python/python8/FIN.tif"
+in_ds = Tile1
+in_band = in_ds.GetRasterBand(1)
+in_data = in_band.ReadAsArray()
+
+out_data = np.ones((rows_tile1, cols_tile1), np.int32) * -99
+out_data[1:-1, 1:-1] = SHDI_fin
+
+#def make_raster(in_ds, fn, data, data_type, nodata=None):
+ 
+ #Create a one-band GeoTIFF.
+ #in_ds - datasource to copy projection and geotransform from
+ #fn - path to the file to create
+ #data - NumPy array containing data to write
+ #data_type - output data type
+ #nodata - optional NoData value
+
+driver = gdal.GetDriverByName('GTiff')
+out_ds = driver.Create(out_fn, in_ds.RasterXSize, in_ds.RasterYSize, 1, gdal.GDT_Byte)
+out_ds.SetProjection(in_ds.GetProjection())
+out_ds.SetGeoTransform(in_ds.GetGeoTransform())
+out_band = out_ds.GetRasterBand(1)
+if nodata is not None:
+    out_band.SetNoDataValue(nodata)
+    out_band.WriteArray(slices_t1_11)
+    out_band.FlushCache()
+    out_band.ComputeStatistics(False)
+    return out_ds
+
+pb.make_raster(in_ds, out_fn, out_data, gdal.GDT_Float32, -99)
+
+
+# SOME OTHER IDEAS ###########################################################
 
 # array_list = [slices_t1_11, slices_t1_21, slices_t1_31, slices_t2_11, slices_t2_21, slices_t2_31, slices_t3_11, slices_t3_21, slices_t3_31]
 #
@@ -111,29 +154,27 @@ for slice in slices_t1_11:
 #     np.apply_along_axis(SHDI, 0, slices)
 #
 # print(slices_t1_11)
-#
+
 
 # create output image
-
-in_band = Tile1.GetRasterBand(1)
-noData = in_band.GetNoDataValue()
-if noData:
-    pass
-else:
-    noData = 0
-
-# Creates an output file with the same dimensions and data type.
-out_ds = gdal.GetDriverByName('GTiff').Create('master.tif', cols_tile1, rows_tile1, 1, gdal.GDT_Byte)
-out_ds.SetProjection(Tile1.GetProjection())
-out_ds.SetGeoTransform(Tile1.GetGeoTransform())
-out_band = out_ds.GetRasterBand(1)
-
-data = slices_t1_11
-out_band.WriteArray(data)
-out_band.SetNoDataValue(noData)
-
-del out_ds
-
+# in_band = Tile1.GetRasterBand(1)
+# noData = in_band.GetNoDataValue()
+# if noData:
+#     pass
+# else:
+#     noData = 0
+#
+# # Creates an output file with the same dimensions and data type.
+# out_ds = gdal.GetDriverByName('GTiff').Create('master.tif', cols_tile1, rows_tile1, 1, gdal.GDT_Byte)
+# out_ds.SetProjection(Tile1.GetProjection())
+# out_ds.SetGeoTransform(Tile1.GetGeoTransform())
+# out_band = out_ds.GetRasterBand(1)
+#
+# data = slices_t1_11
+# out_band.WriteArray(data)
+# out_band.SetNoDataValue(noData)
+#
+# del out_ds
 
 
 # set ending time ############################################################
