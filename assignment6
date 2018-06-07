@@ -1,0 +1,145 @@
+
+#import needed libraries ######################################################
+import time
+import numpy as np
+import gdal
+
+
+
+# set starting time ###########################################################
+starttime = time.strftime("%H:%M:%S", time.localtime())
+print("Process startet at: " + starttime)
+print("--------------------------------------------------------")
+print("")
+
+# open files #################################################################
+
+#root_foler = "O:\Student_Data\DieckmannM\python2\session8"
+
+Tile1 = gdal.Open("/Users/Maria/PycharmProjects/python/python8/Tile_x17999_y20999_1000x1000.tif")
+Tile2 = gdal.Open("/Users/Maria/PycharmProjects/python/python8/Tile_x19999_y32999_1000x1000.tif")
+Tile3 = gdal.Open("/Users/Maria/PycharmProjects/python/python8/Tile_x26999_y12999_1000x1000.tif")
+tile_list = [Tile1, Tile2, Tile3]
+
+
+# read in the crop data and get info about it
+band1_tile1 = Tile1.GetRasterBand(1)
+rows_tile1 = Tile1.RasterYSize
+cols_tile1 = Tile1.RasterXSize
+
+band1_tile2 = Tile2.GetRasterBand(1)
+rows_tile2 = Tile2.RasterYSize
+cols_tile2 = Tile2.RasterXSize
+
+band1_tile3 = Tile3.GetRasterBand(1)
+rows_tile3 = Tile3.RasterYSize
+cols_tile3 = Tile3.RasterXSize
+
+# converting to arrays #################
+array_t1 = np.array(Tile1.ReadAsArray())
+array_t2 = np.array(Tile2.ReadAsArray())
+array_t3 = np.array(Tile3.ReadAsArray())
+
+
+
+def make_slices(data, rows, cols):
+    yrange = data.shape[0] - rows + 1
+    xrange = data.shape[1] - cols + 1
+    #arr1 = np.zeros(shape=(1,121))
+    slices = []
+    counter = 0
+    for i in range(xrange):
+        counter +=1
+        for j in range(yrange):
+            data_st = data[i:rows + i, j:cols + j]
+            array_onedim = data_st.flatten()
+        slices.append(array_onedim)
+            #print(slices)
+        #return(slices_fin)
+    #print("Slices", counter)
+    slice_arr = np.asarray(slices)
+    return slice_arr
+
+
+
+
+#arr_list = list()
+
+slices_t1_11 = make_slices(array_t1, 11,11)
+slices_t1_21 = make_slices(array_t1, 21,21)
+slices_t1_31 = make_slices(array_t1, 31,31)
+
+slices_t2_11 = make_slices(array_t2, 11,11)
+slices_t2_21 = make_slices(array_t2, 21,21)
+slices_t2_31 = make_slices(array_t2, 31,31)
+
+slices_t3_11 = make_slices(array_t3, 11,11)
+slices_t3_21 = make_slices(array_t3, 21,21)
+slices_t3_31 = make_slices(array_t3, 31,31)
+
+
+#print("Slices for Tile 1 with 150m:", '\n', slices_t1_11)
+#print("Slices for Tile 1 with 450m:", '\n', slices_t1_31)
+
+# get a a raster with only -99 for NoData values ###########################
+nodata_ras = np.ones((1000, 1000)) * -99
+#print(nodata_ras)
+
+counter = 0
+#def SHDI():
+for slice in slices_t1_11:
+    results = []
+    counter += 1
+    cat_list = [1, 2, 3, 5, 11, 13, 17, 18, 19]
+    cat_list2 = [4, 6, 7, 8, 9, 10, 12, 14, 15, 16, 20]
+    for x in cat_list:
+        unique, counts = np.unique(x, return_counts=True)
+    for y in cat_list2:
+        y = -99
+    total = len(slice)
+    #print(total)
+    #prop = cat_count / total
+    #print(prop)
+    #shdi = prop * np.log(prop)
+    #results.append(shdi)
+    #print(results)
+
+
+# array_list = [slices_t1_11, slices_t1_21, slices_t1_31, slices_t2_11, slices_t2_21, slices_t2_31, slices_t3_11, slices_t3_21, slices_t3_31]
+#
+# for slices in array_list:
+#     np.apply_along_axis(SHDI, 0, slices)
+#
+# print(slices_t1_11)
+#
+
+# create output image
+
+in_band = Tile1.GetRasterBand(1)
+noData = in_band.GetNoDataValue()
+if noData:
+    pass
+else:
+    noData = 0
+
+# Creates an output file with the same dimensions and data type.
+out_ds = gdal.GetDriverByName('GTiff').Create('master.tif', cols_tile1, rows_tile1, 1, gdal.GDT_Byte)
+out_ds.SetProjection(Tile1.GetProjection())
+out_ds.SetGeoTransform(Tile1.GetGeoTransform())
+out_band = out_ds.GetRasterBand(1)
+
+data = slices_t1_11
+out_band.WriteArray(data)
+out_band.SetNoDataValue(noData)
+
+del out_ds
+
+
+
+# set ending time ############################################################
+print("")
+endtime = time.strftime("%H:%M:%S", time.localtime())
+print("--------------------------------------------------------")
+print("Process startet at: " + starttime)
+print("Process finished at: " + endtime)
+print("")
