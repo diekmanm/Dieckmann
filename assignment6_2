@@ -1,8 +1,10 @@
 import time
+
 starttime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
 print("Starting process, time: " + starttime)
 print("--------------------------------------------------------")
 print("")
+
 ########################################################################
 from osgeo import gdal, ogr, osr
 import pandas as pd
@@ -12,6 +14,7 @@ import geopandas as gpd
 import math
 import random as rd
 from shapely import wkt
+
 ########################################################################
 root_folder = "/Users/Maria/PycharmProjects/python/python8/"
 
@@ -74,34 +77,37 @@ slices3_11 = make_slices(arr3, 11, 11)
 slices3_21 = make_slices(arr3, 21, 21)
 slices3_31 = make_slices(arr3, 31, 31)
 
-# raster writing #
+
 rows = ras1.RasterXSize
 cols = ras1.RasterYSize
 outdata = np.ones((rows, cols)) * -99
 
 drvR = gdal.GetDriverByName('GTiff')
 edge = [5, 10, 15]
-slices_list = [slices1_11, slices1_21, slices1_31, slices2_11, slices2_21, slices2_31, slices3_11,
-                   slices3_21, slices3_31]
+
+slices_list = [slices1_11, slices1_21, slices1_31, slices2_11, slices2_21, slices2_31, slices3_11, slices3_21, slices3_31]
 out_list = ["out1_11", "out1_21", "out1_31", "out2_11", "out2_21", "out2_31", "out3_11", "out3_21", "out3_31"]
 ras_list = [ras1, ras2, ras3]
 
-for a in edge:
-    outdata = outdata[a:-a, a:-a]
-    for b in slices_list:
-        outdata = np.apply_along_axis(shdi, 2, b)
-    # # Formulate an outputName
-    for c in out_list:
-        out_ras = "/Users/Maria/PycharmProjects/python/python8/" + c + ".tif
-        # # Create the file (here: although exactly the same, we go through the syntax)
-        for d in ras_list:
-            pr = d.GetProjection()
-            gt = d.GetGeoTransform()
-            outDS = drvR.Create(out_ras, 1000, 1000, 1, gdal.GDT_Float32)
-            outDS.SetProjection(pr)
-            outDS.SetGeoTransform(gt)
-            outDS.GetRasterBand(1).WriteArray(outdata, 0, 0)
+counter = 0
 
+for a in edge:
+    for b in slices_list:
+        outdata[a:-a, a:-a] = np.apply_along_axis(shdi, 2, b)
+        # Formulate an outputName
+        for c in out_list:
+            out_ras = "/Users/Maria/PycharmProjects/python/python8/" + c + ".tif"
+            counter += 1
+            # Create the file (here: although exactly the same, we go through the syntax)
+            for d in ras_list:
+                pr = d.GetProjection()
+                gt = d.GetGeoTransform()
+
+                outDS = drvR.Create(out_ras, 1000, 1000, 1, gdal.GDT_Float32)
+                outDS.SetProjection(pr)
+                outDS.SetGeoTransform(gt)
+                outDS.GetRasterBand(1).WriteArray(outdata, 0, 0)
+            print("Raster number ", counter, " has been created.")
 
 ########################################################################
 print("")
