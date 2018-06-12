@@ -34,7 +34,7 @@ root_folder = "/Users/Maria/PycharmProjects/python/session9/"
 # output_raster = root_folder + "Elevation_Lambert.tif"
 # gdal.Warp(output_raster,input_raster,dstSRS='EPSG:3035')
 
-# load converted tiffs
+# Elevation Tif
 EL = gdal.Open(root_folder + 'Elevation_Lambert.tif')
 EL_pro = EL.GetProjection()
 EL_gt = EL.GetGeoTransform()
@@ -44,6 +44,7 @@ EL_band = EL.GetRasterBand(1)
 EL_count = EL.RasterCount
 #print(EL_count)
 
+# Distance to road Tif
 DR = gdal.Open(root_folder + 'DistToRoad.tif')
 DR_pro = DR.GetProjection()
 DR_gt = DR.GetGeoTransform()
@@ -53,19 +54,24 @@ DR_band = DR.GetRasterBand(1)
 DR_count = DR.RasterCount
 #print(DR_count)
 
-
-# load converted shapefiles
 driver = ogr.GetDriverByName("ESRI Shapefile")
-#
-PO = driver.Open(root_folder + 'Points_Lambert.shp')
-OG = driver.Open(root_folder + 'Old_Growth_Lambert.shp')
-PL = driver.Open(root_folder + 'PrivateLands.shp')
-PO_lyr = PO.GetLayer()
-OG_lyr = OG.GetLayer()
-PL_lyr = PL.GetLayer()
 
+# Points shapefiles
+PO = driver.Open(root_folder + 'Points_Lambert.shp')
+PO_lyr = PO.GetLayer()
+PO_feat = PO_lyr.GetNextFeature()
+
+# Old Growth Polygons shapefile
+OG = driver.Open(root_folder + 'Old_Growth_Lambert.shp')
+OG_lyr = OG.GetLayer()
 OG_feat = OG_lyr.GetNextFeature()
-OG_geom = OG_feat.GetGeometryRef()
+OG_geom = OG_feat.geometry()
+
+# private lands polygon shapefile
+PL = driver.Open(root_folder + 'PrivateLands.shp')
+PL_lyr = PL.GetLayer()
+PL_feat = PL_lyr.GetNextFeature()
+PL_geom = PL_feat.geometry()
 
 
 srs = PO_lyr.GetSpatialRef()
@@ -74,17 +80,13 @@ tsr.ImportFromWkt(EL_pro)
 trans = osr.CoordinateTransformation(srs, tsr)
 
 
-
-
-PO_feat = PO_lyr.GetNextFeature()
-colnames = "Point ID", "Variable", "Value"
 df = list()
-
 
 
 while PO_feat:
     id = PO_feat.GetField('Id')
     print("ID: ", id)
+
     # elevation
     coord = PO_feat.GetGeometryRef()
     coord_copy = coord.Clone()
@@ -103,28 +105,36 @@ while PO_feat:
     dist = struct.unpack('f', DR_struc_var)
     print("Distance of Point with ID", id, "to a road is about", dist[0], "meters")
     df.append(dist[0])
+
     # point in old_growth area
     coord_copy = coord.Clone()
     #for point in OG:
     OG_ID = OG_feat.GetField("OBJECTID")
-    print(OG_ID)
-    OG_geom = OG_feat.GetGeometryRef()
-    OG_ext = OG_geom.GetEnvelope()
-    geom_point = ogr.Geometry(ogr.wkbPoint)
-         #geom_point.AddPoint(x,y)
-    if OG_geom.contains(PO_lyr):
+    #print(OG_ID)
+    # OG_geom = OG_feat.GetGeometryRef()
+    # OG_ext = OG_geom.GetEnvelope()
+    # geom_point = ogr.Geometry(ogr.wkbPoint)
+    #      #geom_point.AddPoint(x,y)
+    if coord_copy.Within(OG_geom):
         OG = 1
         print('1')
     else:
         OG = 0
         print('0')
-        #df.append(PL)
+    #df.append(OG)
+    if coord_copy.Within(PL_geom):
+        PL = 1
+        print('1')
+    else:
+        PL = 0
+        print('0')
+    df.append(OG)
     df.append([id, x, y])
     PO_feat = PO_lyr.GetNextFeature()
 PO_lyr.ResetReading()
 
 
-
+print(df)
 
 
 
