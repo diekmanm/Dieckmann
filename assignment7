@@ -1,0 +1,161 @@
+import time
+
+starttime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+print("Starting process, time: " + starttime)
+print("--------------------------------------------------------")
+print("")
+
+########################################################################
+from osgeo import ogr, osr, gdal
+import os
+import csv
+import geopandas as gpd
+import math
+import random as rd
+import pandas as pd
+from shapely import wkt
+import struct
+import numpy as np
+###############################################################################
+
+root_folder = "/Users/Maria/PycharmProjects/python/session9/"
+
+# convert files to Lambert coordinate system
+
+# tmp = gpd.GeoDataFrame.from_file(root_folder + 'Points.shp')
+# tmpLambert = tmp.to_crs({'init':'EPSG:3035'})
+# tmpLambert.to_file(root_folder + 'Points_Lambert.shp')
+#
+# tmp = gpd.GeoDataFrame.from_file(root_folder + 'Old_Growth.shp')
+# tmpLambert = tmp.to_crs({'init':'EPSG:3035'})
+# tmpLambert.to_file(root_folder + 'Old_Growth_Lambert.shp')
+#
+# input_raster = gdal.Open(root_folder + "Elevation.tif")
+# output_raster = root_folder + "Elevation_Lambert.tif"
+# gdal.Warp(output_raster,input_raster,dstSRS='EPSG:3035')
+
+# load converted tiffs
+EL = gdal.Open(root_folder + 'Elevation_Lambert.tif')
+EL_pro = EL.GetProjection()
+EL_gt = EL.GetGeoTransform()
+EL_x = EL.RasterXSize
+EL_y = EL.RasterYSize
+EL_band = EL.GetRasterBand(1)
+EL_count = EL.RasterCount
+#print(EL_count)
+
+DR = gdal.Open(root_folder + 'DistToRoad.tif')
+DR_pro = DR.GetProjection()
+DR_gt = DR.GetGeoTransform()
+DR_x = DR.RasterXSize
+DR_y = DR.RasterYSize
+DR_band = DR.GetRasterBand(1)
+DR_count = DR.RasterCount
+#print(DR_count)
+
+
+# load converted shapefiles
+driver = ogr.GetDriverByName("ESRI Shapefile")
+#
+PO = driver.Open(root_folder + 'Points_Lambert.shp')
+OG = driver.Open(root_folder + 'Old_Growth_Lambert.shp')
+PL = driver.Open(root_folder + 'PrivateLands.shp')
+PO_lyr = PO.GetLayer()
+OG_lyr = OG.GetLayer()
+PL_lyr = PL.GetLayer()
+
+OG_feat = OG_lyr.GetNextFeature()
+OG_geom = OG_feat.GetGeometryRef()
+
+
+srs = PO_lyr.GetSpatialRef()
+tsr = osr.SpatialReference()
+tsr.ImportFromWkt(EL_pro)
+trans = osr.CoordinateTransformation(srs, tsr)
+
+
+
+
+PO_feat = PO_lyr.GetNextFeature()
+colnames = "Point ID", "Variable", "Value"
+df = list()
+
+
+
+while PO_feat:
+    id = PO_feat.GetField('Id')
+    print("ID: ", id)
+    # elevation
+    coord = PO_feat.GetGeometryRef()
+    coord_copy = coord.Clone()
+    coord_copy.Transform(trans)
+    x, y = coord_copy.GetX(), coord_copy.GetY()
+    EL_px = int((x - EL_gt[0]) / EL_gt[1])
+    EL_py = int((y - EL_gt[3]) / EL_gt[5])
+    EL_struc_var = EL_band.ReadRaster(EL_px, EL_py,1 ,1)
+    elev = struct.unpack('H', EL_struc_var)
+    print("Elevation of ID ", id, "is", elev[0])
+    df.append(elev[0])
+    # road
+    DR_px = int((x - DR_gt[0]) / DR_gt[1])
+    DR_py = int((y - DR_gt[3]) / DR_gt[5])
+    DR_struc_var = DR_band.ReadRaster(DR_px, DR_py, 1, 1)
+    dist = struct.unpack('f', DR_struc_var)
+    print("Distance of Point with ID", id, "to a road is about", dist[0], "meters")
+    df.append(dist[0])
+    # point in old_growth area
+    coord_copy = coord.Clone()
+    #for point in OG:
+    OG_ID = OG_feat.GetField("OBJECTID")
+    print(OG_ID)
+    OG_geom = OG_feat.GetGeometryRef()
+    OG_ext = OG_geom.GetEnvelope()
+    geom_point = ogr.Geometry(ogr.wkbPoint)
+         #geom_point.AddPoint(x,y)
+    if OG_geom.contains(PO_lyr):
+        OG = 1
+        print('1')
+    else:
+        OG = 0
+        print('0')
+        #df.append(PL)
+    df.append([id, x, y])
+    PO_feat = PO_lyr.GetNextFeature()
+PO_lyr.ResetReading()
+
+
+
+
+
+
+
+#write csv
+# fields = ["Point ID", "Variable", "Value"]
+# rows = zip(point_id, variable, value)
+# filename = "result.csv"
+#
+# with open(filename, 'w') as csvfile:
+#     csvwriter = csv.writer(csvfile)
+#     csvwriter.writerow(fields)
+#     csvwriter.writerows(rows)
+
+
+
+
+
+
+
+
+########################################################################
+print("")
+endtime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+print("--------------------------------------------------------")
+print("start: " + starttime)
+print("end: " + endtime)
+
+########################################################################
+print("")
+endtime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+print("--------------------------------------------------------")
+print("start: " + starttime)
+print("end: " + endtime)
