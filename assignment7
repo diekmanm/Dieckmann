@@ -7,151 +7,139 @@ print("")
 
 ########################################################################
 from osgeo import ogr, osr, gdal
-import os
-import csv
-import geopandas as gpd
-import math
-import random as rd
-import pandas as pd
-from shapely import wkt
 import struct
-import numpy as np
+import geopandas as gpd
+import pandas as pd
 ###############################################################################
 
 root_folder = "/Users/Maria/PycharmProjects/python/session9/"
 
 # convert files to Lambert coordinate system
 
-# tmp = gpd.GeoDataFrame.from_file(root_folder + 'Points.shp')
-# tmpLambert = tmp.to_crs({'init':'EPSG:3035'})
-# tmpLambert.to_file(root_folder + 'Points_Lambert.shp')
-#
-# tmp = gpd.GeoDataFrame.from_file(root_folder + 'Old_Growth.shp')
-# tmpLambert = tmp.to_crs({'init':'EPSG:3035'})
-# tmpLambert.to_file(root_folder + 'Old_Growth_Lambert.shp')
-#
-# input_raster = gdal.Open(root_folder + "Elevation.tif")
-# output_raster = root_folder + "Elevation_Lambert.tif"
-# gdal.Warp(output_raster,input_raster,dstSRS='EPSG:3035')
+tmp = gpd.GeoDataFrame.from_file(root_folder + 'Points.shp')
+tmpLambert = tmp.to_crs({'init':'EPSG:3035'})
+tmpLambert.to_file(root_folder + 'Points_Lambert.shp')
 
-# Elevation Tif
-EL = gdal.Open(root_folder + 'Elevation_Lambert.tif')
-EL_pro = EL.GetProjection()
-EL_gt = EL.GetGeoTransform()
-EL_x = EL.RasterXSize
-EL_y = EL.RasterYSize
-EL_band = EL.GetRasterBand(1)
-EL_count = EL.RasterCount
-#print(EL_count)
+tmp = gpd.GeoDataFrame.from_file(root_folder + 'Old_Growth.shp')
+tmpLambert = tmp.to_crs({'init':'EPSG:3035'})
+tmpLambert.to_file(root_folder + 'Old_Growth_Lambert.shp')
 
-# Distance to road Tif
-DR = gdal.Open(root_folder + 'DistToRoad.tif')
-DR_pro = DR.GetProjection()
-DR_gt = DR.GetGeoTransform()
-DR_x = DR.RasterXSize
-DR_y = DR.RasterYSize
-DR_band = DR.GetRasterBand(1)
-DR_count = DR.RasterCount
-#print(DR_count)
+input_raster = gdal.Open(root_folder + "Elevation.tif")
+output_raster = root_folder + "Elevation_Lambert.tif"
+gdal.Warp(output_raster,input_raster,dstSRS='EPSG:3035')
+
 
 driver = ogr.GetDriverByName("ESRI Shapefile")
 
 # Points shapefiles
-PO = driver.Open(root_folder + 'Points_Lambert.shp')
+PO = driver.Open(root_folder + 'Points.shp')
 PO_lyr = PO.GetLayer()
-PO_feat = PO_lyr.GetNextFeature()
+srs = PO_lyr.GetSpatialRef()
 
 # Old Growth Polygons shapefile
-OG = driver.Open(root_folder + 'Old_Growth_Lambert.shp')
+OG = driver.Open(root_folder + 'Old_Growth.shp')
 OG_lyr = OG.GetLayer()
-OG_feat = OG_lyr.GetNextFeature()
-OG_geom = OG_feat.geometry()
+tsr_OG = OG_lyr.GetSpatialRef()
+trans_OG = osr.CoordinateTransformation(srs, tsr_OG)
 
 # private lands polygon shapefile
 PL = driver.Open(root_folder + 'PrivateLands.shp')
 PL_lyr = PL.GetLayer()
-PL_feat = PL_lyr.GetNextFeature()
-PL_geom = PL_feat.geometry()
+tsr_PL = PL_lyr.GetSpatialRef()
+trans_PL = osr.CoordinateTransformation(srs, tsr_PL)
+
+# Elevation Tif
+EL = gdal.Open('/Users/Maria/PycharmProjects/python/session9/Elevation.tif')
+EL_pro = EL.GetProjection()
+EL_tsr = osr.SpatialReference()
+EL_tsr.ImportFromWkt(EL_pro)
+trans_EL = osr.CoordinateTransformation(srs, EL_tsr)
+
+# Distance to road Tif
+DR = gdal.Open('/Users/Maria/PycharmProjects/python/session9/DistToRoad.tif')
+DR_pro = DR.GetProjection()
+DR_tsr = osr.SpatialReference()
+DR_tsr.ImportFromWkt(DR_pro)
+trans_DR = osr.CoordinateTransformation(srs, DR_tsr)
 
 
-srs = PO_lyr.GetSpatialRef()
-tsr = osr.SpatialReference()
-tsr.ImportFromWkt(EL_pro)
-trans = osr.CoordinateTransformation(srs, tsr)
 
 
+
+PO_feat = PO_lyr.GetNextFeature()
 df = list()
-
 
 while PO_feat:
     id = PO_feat.GetField('Id')
     print("ID: ", id)
+    geom = PO_feat.GetGeometryRef()
 
     # elevation
-    coord = PO_feat.GetGeometryRef()
-    coord_copy = coord.Clone()
-    coord_copy.Transform(trans)
-    x, y = coord_copy.GetX(), coord_copy.GetY()
+    geom_copy = geom.Clone()
+    geom_copy.Transform(trans_EL)
+    EL_gt = EL.GetGeoTransform()
+    x, y = geom_copy.GetX(), geom_copy.GetY()
     EL_px = int((x - EL_gt[0]) / EL_gt[1])
     EL_py = int((y - EL_gt[3]) / EL_gt[5])
+    EL_band = EL.GetRasterBand(1)
     EL_struc_var = EL_band.ReadRaster(EL_px, EL_py,1 ,1)
     elev = struct.unpack('H', EL_struc_var)
-    print("Elevation of ID ", id, "is", elev[0])
-    df.append(elev[0])
+    elevation = elev[0]
+    print("Elevation of ID ", id, "is", elevation)
+
     # road
+    geom_copy = geom.Clone()
+    geom_copy.Transform(trans_DR)
+    DR_gt = DR.GetGeoTransform()
+    x, y = geom_copy.GetX(), geom_copy.GetY()
     DR_px = int((x - DR_gt[0]) / DR_gt[1])
     DR_py = int((y - DR_gt[3]) / DR_gt[5])
+    DR_band = DR.GetRasterBand(1)
     DR_struc_var = DR_band.ReadRaster(DR_px, DR_py, 1, 1)
     dist = struct.unpack('f', DR_struc_var)
-    print("Distance of Point with ID", id, "to a road is about", dist[0], "meters")
-    df.append(dist[0])
+    distance = dist[0]
+    print("Distance of Point with ID", id, "to a road is about", distance, "meters")
 
     # point in old_growth area
-    coord_copy = coord.Clone()
-    #for point in OG:
-    OG_ID = OG_feat.GetField("OBJECTID")
-    #print(OG_ID)
-    # OG_geom = OG_feat.GetGeometryRef()
-    # OG_ext = OG_geom.GetEnvelope()
-    # geom_point = ogr.Geometry(ogr.wkbPoint)
-    #      #geom_point.AddPoint(x,y)
-    if coord_copy.Within(OG_geom):
+    geom_copy = geom.Clone()
+    geom_copy.Transform(trans_OG)
+    OG_lyr.SetSpatialFilter(geom_copy)
+    if OG_lyr.GetFeatureCount() > 0:
         OG = 1
-        print('1')
+        print('Point is in OG area')
+        print("")
     else:
         OG = 0
-        print('0')
-    #df.append(OG)
-    if coord_copy.Within(PL_geom):
+        print('Point is NOT in OG area')
+        print("")
+    OG_lyr.SetSpatialFilter(None)
+
+    # point in private land area
+    geom_copy = geom.Clone()
+    geom_copy.Transform(trans_PL)
+    PL_lyr.SetSpatialFilter(geom_copy)
+    if PL_lyr.GetFeatureCount() > 0:
         PL = 1
-        print('1')
+        print('Point is in OG area')
+        print("")
     else:
         PL = 0
-        print('0')
-    df.append(OG)
-    df.append([id, x, y])
+        print('Point is NOT in OG area')
+        print("")
+    PL_lyr.SetSpatialFilter(None)
+
+    df.append([id, OG, PL, elevation, distance])
     PO_feat = PO_lyr.GetNextFeature()
 PO_lyr.ResetReading()
-
-
 print(df)
 
 
 
+labels = list(('ID', 'Private',  'OldGrowth', 'Elevation', 'Road_Dist'))
+df = pd.DataFrame.from_records(df, columns = labels)
+df = pd.melt(df, id_vars=['ID'], value_vars=['Private',  'OldGrowth', 'Elevation', 'Road_Dist'])
 
-#write csv
-# fields = ["Point ID", "Variable", "Value"]
-# rows = zip(point_id, variable, value)
-# filename = "result.csv"
-#
-# with open(filename, 'w') as csvfile:
-#     csvwriter = csv.writer(csvfile)
-#     csvwriter.writerow(fields)
-#     csvwriter.writerows(rows)
-
-
-
-
+df.to_csv("result.csv", sep='\t')
 
 
 
