@@ -5,7 +5,7 @@ print("Starting process, time: " + starttime)
 print("--------------------------------------------------------")
 print("")
 
-########################################################################
+##############################################################################
 from osgeo import ogr, osr, gdal
 import struct
 import geopandas as gpd
@@ -16,17 +16,17 @@ root_folder = "/Users/Maria/PycharmProjects/python/session9/"
 
 # convert files to Lambert coordinate system
 
-tmp = gpd.GeoDataFrame.from_file(root_folder + 'Points.shp')
-tmpLambert = tmp.to_crs({'init':'EPSG:3035'})
-tmpLambert.to_file(root_folder + 'Points_Lambert.shp')
+#tmp = gpd.GeoDataFrame.from_file(root_folder + 'Points.shp')
+#tmpLambert = tmp.to_crs({'init':'EPSG:3035'})
+#tmpLambert.to_file(root_folder + 'Points_Lambert.shp')
 
-tmp = gpd.GeoDataFrame.from_file(root_folder + 'Old_Growth.shp')
-tmpLambert = tmp.to_crs({'init':'EPSG:3035'})
-tmpLambert.to_file(root_folder + 'Old_Growth_Lambert.shp')
+#tmp = gpd.GeoDataFrame.from_file(root_folder + 'Old_Growth.shp')
+#tmpLambert = tmp.to_crs({'init':'EPSG:3035'})
+#tmpLambert.to_file(root_folder + 'Old_Growth_Lambert.shp')
 
-input_raster = gdal.Open(root_folder + "Elevation.tif")
-output_raster = root_folder + "Elevation_Lambert.tif"
-gdal.Warp(output_raster,input_raster,dstSRS='EPSG:3035')
+#input_raster = gdal.Open(root_folder + "Elevation.tif")
+#output_raster = root_folder + "Elevation_Lambert.tif"
+#gdal.Warp(output_raster,input_raster,dstSRS='EPSG:3035')
 
 
 driver = ogr.GetDriverByName("ESRI Shapefile")
@@ -61,8 +61,6 @@ DR_pro = DR.GetProjection()
 DR_tsr = osr.SpatialReference()
 DR_tsr.ImportFromWkt(DR_pro)
 trans_DR = osr.CoordinateTransformation(srs, DR_tsr)
-
-
 
 
 
@@ -137,14 +135,16 @@ print(df)
 
 labels = list(('ID', 'Private',  'OldGrowth', 'Elevation', 'Road_Dist'))
 df = pd.DataFrame.from_records(df, columns = labels)
+df.round({'Private': 1, 'OLDGrowth': 1, 'Road_Dist': 2})
 df = pd.melt(df, id_vars=['ID'], value_vars=['Private',  'OldGrowth', 'Elevation', 'Road_Dist'])
+df.sort_values(by=['ID'])
 
 df.to_csv("result.csv", sep='\t')
 
 
 
 
-########################################################################
+############################################################################
 print("")
 endtime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
 print("--------------------------------------------------------")
